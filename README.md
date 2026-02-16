@@ -4,6 +4,15 @@ A WordPress plugin that provides markdown versions of posts and pages for LLMs a
 
 Fork of [Markdown Alternate](https://github.com/ProgressPlanner/markdown-alternate) by [Joost de Valk](https://joost.blog).
 
+## Why For the Bots?
+
+This fork improves on the original Markdown Alternate with better performance, stability, and security.
+
+- **Performance & caching** — Rendered markdown is cached using the WordPress object cache and transients. A singleton converter avoids redundant HTML-to-markdown work. Configurable via `for_the_bots_cache_ttl`, `for_the_bots_dual_cache_write`, and `for_the_bots_use_cache` filters. Password-protected posts are never cached.
+- **Stability** — HTML-to-Markdown conversion is wrapped in try/catch with a `wp_strip_all_tags` fallback. Use the `for_the_bots_conversion_error_fallback` filter to customize fallback output. Hierarchical pages use `get_page_by_path()` with a `for_the_bots_resolve_post_by_path` filter when `url_to_postid` fails. Accept-header handling is limited to singular content to avoid 404s on feeds and archives.
+- **Security** — Uses `wp_safe_redirect` instead of `wp_redirect`, and `esc_url_raw` for safer URL handling. Path validation helps prevent edge-case redirect issues.
+- **Extensibility** — Support for custom post types and post resolution via filters, plus cache context and conversion-fallback hooks for advanced control.
+
 ## Features
 
 - Access any post at `/post-slug.md`
