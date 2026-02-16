@@ -1,0 +1,24 @@
+{
+    "name": "mathetos/for-the-bots",
+    "description": "WordPress plugin providing markdown versions of content via .md URLs",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://github.com/mathetos/for-the-bots",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mathetos/for-the-bots.git"
+    },
+    "require": {
+        "php": ">=7.4",
+        "league/html-to-markdown": "^5.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "ForTheBots\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

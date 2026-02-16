@@ -1,0 +1,124 @@
+name: Create Release ZIP
+
+on:
+  push:
+    tags:
+      - 'v*'  # e.g. v1.0.0
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for changelog generation
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: mbstring, xml, curl, zip
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          # Strip leading 'v' if present (e.g. v1.0.0 -> 1.0.0)
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+          echo "Previous tag: ${PREV_TAG:-'none (first release)'}"
+
+          # Generate changelog
+          if [ -z "$PREV_TAG" ]; then
+            # First release - get all commits
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            # Get commits between tags
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+
+          # Handle empty changelog
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="- No changes detected"
+          fi
+
+          # Format as markdown
+          CHANGELOG_MD="## Changes in ${{ steps.version.outputs.version }}
+
+          $CHANGELOG"
+
+          # Output for release body
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_MD" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "Generated changelog:"
+          echo "$CHANGELOG_MD"
+
+      - name: Create ZIP file
+        id: zip
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP_NAME="for-the-bots-${VERSION}.zip"
+
+          echo "Creating ZIP: $ZIP_NAME"
+
+          mkdir -p /tmp/for-the-bots-release
+
+          # Copy plugin files, excluding items in .distignore
+          # ZIP extracts to for-the-bots/ (WordPress plugin folder standard)
+          rsync -av \
+            --exclude-from='.distignore' \
+            ./ /tmp/for-the-bots-release/for-the-bots/
+
+          # Create ZIP
+          cd /tmp/for-the-bots-release
+          zip -r "${GITHUB_WORKSPACE}/${ZIP_NAME}" for-the-bots/
+          cd "${GITHUB_WORKSPACE}"
+
+          rm -rf /tmp/for-the-bots-release
+
+          if [ ! -f "${ZIP_NAME}" ]; then
+            echo "Error: ZIP file was not created"
+            exit 1
+          fi
+
+          ZIP_SIZE=$(stat -c%s "${ZIP_NAME}" 2>/dev/null || echo "unknown")
+          echo "ZIP file created: ${ZIP_NAME} (${ZIP_SIZE} bytes)"
+
+          if ! unzip -l "${ZIP_NAME}" | grep -q "for-the-bots/"; then
+            echo "Warning: ZIP structure may be incorrect"
+          else
+            echo "ZIP structure verified: contains for-the-bots/ folder"
+          fi
+
+          echo "zip_path=${ZIP_NAME}" >> $GITHUB_OUTPUT
+          echo "zip_name=${ZIP_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.zip.outputs.zip_path }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

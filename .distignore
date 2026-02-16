@@ -1,0 +1,27 @@
+# Development / VCS metadata
+/.git
+/.github
+/.cursor
+/.vscode
+/.idea
+/.gitignore
+/.gitattributes
+/.distignore
+/.wordpress-org
+
+# Composer dev files (vendor is installed fresh in CI and included in ZIP)
+/composer.json
+/composer.lock
+
+# PHPCS / dev tooling
+/phpcs.xml
+
+# Development documentation (optional; include if you want README in ZIP)
+# /README.md
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+
+# Release artifacts
+*.zip

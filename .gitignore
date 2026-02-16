@@ -1,0 +1,14 @@
+# Composer (vendor is installed via composer install; commit composer.json + composer.lock)
+/vendor/
+
+# IDE and editor files
+.vscode/
+.idea/
+.cursor/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.zip
